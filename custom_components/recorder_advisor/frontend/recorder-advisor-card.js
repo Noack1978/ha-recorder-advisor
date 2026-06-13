@@ -328,7 +328,7 @@ class RecorderAdvisorCard extends HTMLElement {
   _renderList(filtered, selable, allSel) {
     return `
       <div class="toolbar">
-        <input type="text" id="s-search" placeholder="Entitaet / Domain..." value="${this._filter}">
+        <input type="text" id="s-search" placeholder="Suchen... (Enter)" value="${this._filter}">
         <select id="s-rec">
           <option value="all"                 ${this._filterRec==="all"                 ? "selected" : ""}>Alle</option>
           <option value="exclude_strongly"    ${this._filterRec==="exclude_strongly"    ? "selected" : ""}>⛔ Dringend</option>
@@ -399,7 +399,7 @@ class RecorderAdvisorCard extends HTMLElement {
   _renderIgnored(filtIgn, allSelI) {
     return `
       <div class="toolbar">
-        <input type="text" id="s-ign" placeholder="Entitaet suchen..." value="${this._filter}">
+        <input type="text" id="s-ign" placeholder="Suchen... (Enter)" value="${this._filter}">
       </div>
       <div class="action-bar">
         <span class="info">${this._selIgnored.size} von ${filtIgn.length} ausgewaehlt</span>
@@ -429,7 +429,7 @@ class RecorderAdvisorCard extends HTMLElement {
     const allSelA = filtApp.length > 0 && this._selApplied.size >= filtApp.length;
     return `
       <div class="toolbar">
-        <input type="text" id="s-app" placeholder="Entitaet suchen..." value="${this._filter}">
+        <input type="text" id="s-app" placeholder="Suchen... (Enter)" value="${this._filter}">
       </div>
       <div class="action-bar">
         <span class="info">${this._selApplied.size} von ${filtApp.length} ausgewaehlt</span>
