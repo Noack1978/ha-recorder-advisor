@@ -94,6 +94,8 @@ class RecorderAdvisorCard extends HTMLElement {
     this._loading = false;
     this._message = null;
     this._yaml = null;
+    this._applied = [];
+    this._selApplied = new Set();
     this._initialized = false;
   }
 
@@ -115,6 +117,7 @@ class RecorderAdvisorCard extends HTMLElement {
       this._hass.connection.subscribeEvents((ev) => {
         this._entities = ev.data.entities || [];
         this._ignored  = ev.data.ignored  || [];
+        this._applied  = ev.data.applied  || [];
         this._loading  = false;
         this._render();
       }, `${DOMAIN}_results`);
@@ -187,6 +190,19 @@ class RecorderAdvisorCard extends HTMLElement {
     this._message = { type: "success", text: `${ok} Entitaet(en) wieder analysiert.` };
   }
 
+  async _unmarkApplied() {
+    if (!this._selApplied.size) return;
+    this._loading = true; this._render();
+    try {
+      await this._hass.callService(DOMAIN, "unmark_applied", { entity_ids: [...this._selApplied] });
+      this._message = { type: "success", text: `${this._selApplied.size} Entitaet(en) wieder in Analyse aufgenommen.` };
+      this._selApplied.clear();
+    } catch (e) {
+      this._message = { type: "error", text: e.message };
+      this._loading = false; this._render();
+    }
+  }
+
   _copyYaml() {
     if (!this._yaml) return;
     const text = this._yaml;
@@ -231,6 +247,20 @@ class RecorderAdvisorCard extends HTMLElement {
         return a.entity_id.localeCompare(b.entity_id);
       });
   }
+
+  _filteredApplied() {
+    const f = this._filter.toLowerCase();
+    return this._applied.filter(id => !f || id.toLowerCase().includes(f)).sort();
+  }
+
+  _selAllApplied() {
+    const f = this._filteredApplied();
+    if (this._selApplied.size >= f.length) this._selApplied.clear();
+    else f.forEach(id => this._selApplied.add(id));
+    this._render();
+  }
+
+  _toggleApp(id) { this._selApplied.has(id) ? this._selApplied.delete(id) : this._selApplied.add(id); this._render(); }
 
   _filteredIgnored() {
     const f = this._filter.toLowerCase();
@@ -283,11 +313,13 @@ class RecorderAdvisorCard extends HTMLElement {
           <div class="tab ${this._tab==="list"    ? "active" : ""}" id="tab-list">📋 Entitäten (${this._entities.length})</div>
           <div class="tab ${this._tab==="yaml"    ? "active" : ""}" id="tab-yaml">📄 YAML</div>
           <div class="tab ${this._tab==="ignored" ? "active" : ""}" id="tab-ign">👁 Ignoriert (${this._ignored.length})</div>
+          <div class="tab ${this._tab==="applied" ? "active" : ""}" id="tab-app">✅ Angewendet (${this._applied.length})</div>
         </div>
         ${this._message ? `<div class="msg ${this._message.type}">${this._message.text}</div>` : ""}
         ${this._tab === "list"    ? this._renderList(filtered, selable, allSel) : ""}
         ${this._tab === "yaml"    ? this._renderYaml() : ""}
         ${this._tab === "ignored" ? this._renderIgnored(filtIgn, allSelI) : ""}
+        ${this._tab === "applied" ? this._renderApplied() : ""}
       </ha-card>
     `;
     this._wire();
@@ -392,12 +424,43 @@ class RecorderAdvisorCard extends HTMLElement {
     `;
   }
 
+  _renderApplied() {
+    const filtApp = this._filteredApplied();
+    const allSelA = filtApp.length > 0 && this._selApplied.size >= filtApp.length;
+    return `
+      <div class="toolbar">
+        <input type="text" id="s-app" placeholder="Entitaet suchen..." value="${this._filter}">
+      </div>
+      <div class="action-bar">
+        <span class="info">${this._selApplied.size} von ${filtApp.length} ausgewaehlt</span>
+        <button class="btn-secondary" id="btn-unapp" ${!this._selApplied.size ? "disabled" : ""}>↩ Wieder analysieren</button>
+      </div>
+      <div class="sel-all" id="sel-all-app">
+        <input type="checkbox" ${allSelA ? "checked" : ""}> Alle (${filtApp.length})
+      </div>
+      <div class="list">
+        ${!filtApp.length
+          ? '<div class="empty">Keine angewendeten Ausschluesse gespeichert.</div>'
+          : filtApp.map(id => {
+              const sel = this._selApplied.has(id);
+              return `<div class="ign-row${sel ? " sel" : ""}" data-app="${id}">
+                <input type="checkbox" data-acb="${id}" ${sel ? "checked" : ""}>
+                <span class="ign-id">${id}</span>
+                <span class="ign-dom">${id.split(".")[0]}</span>
+              </div>`;
+            }).join("")
+        }
+      </div>
+    `;
+  }
+
   _wire() {
     const r = this.shadowRoot;
     r.getElementById("btn-ra")      ?.addEventListener("click", () => this._reanalyze());
     r.getElementById("tab-list")    ?.addEventListener("click", () => { this._tab="list";    this._filter=""; this._selected.clear();    this._render(); });
     r.getElementById("tab-yaml")    ?.addEventListener("click", () => { this._tab="yaml";    this._render(); });
     r.getElementById("tab-ign")     ?.addEventListener("click", () => { this._tab="ignored"; this._filter=""; this._selIgnored.clear(); this._render(); });
+    r.getElementById("tab-app")     ?.addEventListener("click", () => { this._tab="applied"; this._filter=""; this._selApplied.clear(); this._render(); });
     r.getElementById("btn-yaml")    ?.addEventListener("click", () => this._generateYaml());
     r.getElementById("btn-applied") ?.addEventListener("click", () => this._markApplied());
     r.getElementById("btn-ign")     ?.addEventListener("click", () => this._ignore());
@@ -417,6 +480,11 @@ class RecorderAdvisorCard extends HTMLElement {
     r.getElementById("s-ign")       ?.addEventListener("input",  e => { this._filter=e.target.value; this._render(); });
     r.querySelectorAll("[data-icb]").forEach(cb => cb.addEventListener("change", e => { e.stopPropagation(); this._toggleIgn(cb.dataset.icb); }));
     r.querySelectorAll(".ign-row").forEach(row => row.addEventListener("click", e => { if (e.target.tagName==="INPUT") return; this._toggleIgn(row.dataset.ign); }));
+    r.getElementById("btn-unapp")   ?.addEventListener("click", () => this._unmarkApplied());
+    r.getElementById("sel-all-app") ?.addEventListener("click", () => this._selAllApplied());
+    r.getElementById("s-app")       ?.addEventListener("input",  e => { this._filter=e.target.value; this._render(); });
+    r.querySelectorAll("[data-acb]").forEach(cb => cb.addEventListener("change", e => { e.stopPropagation(); this._toggleApp(cb.dataset.acb); }));
+    r.querySelectorAll("[data-app]").forEach(row => row.addEventListener("click", e => { if (e.target.tagName==="INPUT") return; this._toggleApp(row.dataset.app); }));
   }
 
   getCardSize() { return 7; }

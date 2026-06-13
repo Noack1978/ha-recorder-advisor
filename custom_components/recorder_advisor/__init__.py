@@ -76,6 +76,7 @@ def _fire_results(hass: HomeAssistant, runtime: RecorderAdvisorData) -> None:
         {
             "entities": runtime.last_results,
             "ignored": list(runtime.ignored_entities),
+            "applied": runtime.applied_exclusions,
         },
         context=None,
     )
@@ -153,11 +154,31 @@ def _register_services(hass: HomeAssistant, entry: ConfigEntry) -> None:
         runtime.last_results = await runtime.analyzer.async_analyze(runtime.ignored_entities)
         _fire_results(hass, runtime)
 
+    async def handle_unmark_applied(call: ServiceCall) -> None:
+        runtime: RecorderAdvisorData = entry.runtime_data
+        entity_ids = call.data.get("entity_ids", [])
+        for eid in entity_ids:
+            if eid in runtime.applied_exclusions:
+                runtime.applied_exclusions.remove(eid)
+        await runtime.store.async_save({
+            "applied_exclusions": runtime.applied_exclusions,
+            "ignored_entities": list(runtime.ignored_entities),
+        })
+        _LOGGER.info("Recorder Advisor: unmarked applied: %s", entity_ids)
+        # Re-analyze so entities reappear if still high-frequency
+        results = await runtime.analyzer.async_analyze(runtime.ignored_entities)
+        runtime.last_results = [
+            e for e in results
+            if e["entity_id"] not in runtime.applied_exclusions
+        ]
+        _fire_results(hass, runtime)
+
     if not hass.services.has_service(DOMAIN, "get_results"):
         hass.services.async_register(DOMAIN, "get_results", handle_get_results)
         hass.services.async_register(DOMAIN, "reanalyze", handle_reanalyze)
         hass.services.async_register(DOMAIN, "generate_yaml", handle_generate_yaml)
         hass.services.async_register(DOMAIN, "mark_applied", handle_mark_applied)
+        hass.services.async_register(DOMAIN, "unmark_applied", handle_unmark_applied)
         hass.services.async_register(DOMAIN, "ignore_entity", handle_ignore_entity)
         hass.services.async_register(DOMAIN, "unignore_entity", handle_unignore_entity)
 
@@ -173,7 +194,7 @@ def _generate_recorder_yaml(entity_ids: list[str]) -> str:
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
-    for service in ["get_results", "reanalyze", "generate_yaml", "mark_applied",
+    for service in ["get_results", "reanalyze", "generate_yaml", "mark_applied", "unmark_applied",
                     "ignore_entity", "unignore_entity"]:
         hass.services.async_remove(DOMAIN, service)
     return True

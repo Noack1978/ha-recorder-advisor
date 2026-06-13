@@ -53,3 +53,15 @@ unignore_entity:
       example: "sensor.temperatur"
       selector:
         text:
+
+unmark_applied:
+  name: Angewendet-Markierung aufheben
+  description: Nimmt Entitäten wieder in die Analyse auf.
+  fields:
+    entity_ids:
+      name: Entitäts-IDs
+      description: Liste der Entitäten deren Markierung aufgehoben werden soll.
+      required: true
+      example: '["sensor.temperatur"]'
+      selector:
+        object:
