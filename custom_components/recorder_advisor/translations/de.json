@@ -1,0 +1,30 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Recorder Advisor einrichten",
+        "description": "Analysiert den Recorder auf schreibintensive Entitäten.",
+        "data": {
+          "top_n": "Anzahl Top-Entitäten",
+          "min_changes_per_day": "Mindest-Änderungen/Tag",
+          "lookback_days": "Analysezeitraum (Tage)"
+        }
+      }
+    },
+    "abort": {
+      "already_configured": "Integration ist bereits eingerichtet."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Einstellungen",
+        "data": {
+          "top_n": "Anzahl Top-Entitäten",
+          "min_changes_per_day": "Mindest-Änderungen/Tag",
+          "lookback_days": "Analysezeitraum (Tage)"
+        }
+      }
+    }
+  }
+}
