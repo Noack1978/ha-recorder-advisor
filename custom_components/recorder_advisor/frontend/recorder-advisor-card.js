@@ -101,12 +101,13 @@ class RecorderAdvisorCard extends HTMLElement {
 
   set hass(hass) {
     this._hass = hass;
-    this._render();
     if (!this._initialized) {
       this._initialized = true;
+      this._render(); // initial render only
       this._subscribe();
       this._load();
     }
+    // Do NOT re-render on every hass update — only event callbacks trigger render
   }
 
   _subscribe() {
