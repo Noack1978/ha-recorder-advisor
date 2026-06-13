@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 120">
+  <!-- Icon area -->
+  <circle cx="60" cy="60" r="52" fill="#1565c0"/>
+  <!-- DB cylinder -->
+  <rect x="34" y="34" width="52" height="36" rx="2" fill="white" opacity="0.9"/>
+  <ellipse cx="60" cy="34" rx="26" ry="7.5" fill="white"/>
+  <ellipse cx="60" cy="70" rx="26" ry="7.5" fill="white"/>
+  <line x1="34" y1="46" x2="86" y2="46" stroke="#1565c0" stroke-width="2" opacity="0.4"/>
+  <line x1="34" y1="57" x2="86" y2="57" stroke="#1565c0" stroke-width="2" opacity="0.4"/>
+  <!-- Mini bar chart -->
+  <rect x="72" y="62" width="5" height="8"  rx="1" fill="#42a5f5"/>
+  <rect x="79" y="56" width="5" height="14" rx="1" fill="#42a5f5"/>
+  <rect x="86" y="49" width="5" height="21" rx="1" fill="#42a5f5"/>
+  <!-- Magnifier -->
+  <circle cx="44" cy="88" r="8" fill="none" stroke="white" stroke-width="4"/>
+  <line x1="50" y1="94" x2="56" y2="100" stroke="white" stroke-width="4" stroke-linecap="round"/>
+
+  <!-- Text -->
+  <text x="130" y="52" font-family="'Roboto','Helvetica Neue',Arial,sans-serif" font-size="32" font-weight="700" fill="#212121">Recorder</text>
+  <text x="130" y="88" font-family="'Roboto','Helvetica Neue',Arial,sans-serif" font-size="32" font-weight="400" fill="#1565c0">Advisor</text>
+</svg>

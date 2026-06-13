@@ -25,11 +25,14 @@ class RecorderAdvisorData:
 
 async def async_setup(hass: HomeAssistant, config: dict) -> bool:
     """Register static path for frontend card."""
-    hass.http.register_static_path(
-        "/recorder_advisor_card",
-        hass.config.path("custom_components/recorder_advisor/www"),
-        cache_headers=False,
-    )
+    from homeassistant.components.http import StaticPathConfig
+    await hass.http.async_register_static_paths([
+        StaticPathConfig(
+            "/recorder_advisor_card",
+            hass.config.path("custom_components/recorder_advisor/www"),
+            cache_headers=False,
+        )
+    ])
     return True
 
 

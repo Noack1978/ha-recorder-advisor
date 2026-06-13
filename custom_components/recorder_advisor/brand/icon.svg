@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+  <!-- Background circle -->
+  <circle cx="128" cy="128" r="128" fill="#1565c0"/>
+  <!-- Database cylinder body -->
+  <rect x="72" y="80" width="112" height="76" rx="4" fill="white" opacity="0.9"/>
+  <!-- Database top ellipse -->
+  <ellipse cx="128" cy="80" rx="56" ry="16" fill="white"/>
+  <!-- Database bottom ellipse -->
+  <ellipse cx="128" cy="156" rx="56" ry="16" fill="white"/>
+  <!-- Horizontal lines on cylinder -->
+  <line x1="72" y1="106" x2="184" y2="106" stroke="#1565c0" stroke-width="3" opacity="0.5"/>
+  <line x1="72" y1="130" x2="184" y2="130" stroke="#1565c0" stroke-width="3" opacity="0.5"/>
+  <!-- Bar chart rising from bottom right -->
+  <rect x="154" y="136" width="14" height="20" rx="2" fill="#42a5f5"/>
+  <rect x="172" y="120" width="14" height="36" rx="2" fill="#42a5f5"/>
+  <rect x="190" y="104" width="14" height="52" rx="2" fill="#42a5f5"/>
+  <!-- Magnifying glass -->
+  <circle cx="98" cy="172" r="18" fill="none" stroke="white" stroke-width="8"/>
+  <line x1="111" y1="185" x2="124" y2="198" stroke="white" stroke-width="8" stroke-linecap="round"/>
+</svg>
