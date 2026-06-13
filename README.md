@@ -16,6 +16,14 @@ Analysiert die Home Assistant Recorder-Datenbank auf hochfrequente Entitäten un
 - ✅ "Als angewendet markieren" – merkt sich, welche Ausschlüsse bereits eingefügt wurden
 - 🔎 Suche, Filterung nach Empfehlungsstufe & Sortierung
 
+## Voraussetzungen
+
+- **Home Assistant Recorder-Integration** muss aktiv sein (Standardmäßig aktiviert in HA)
+- **Recorder-Modus:** Die Integration nutzt die interne HA-Recorder-Datenbank (SQLite) direkt über die HA-eigene API – keine externe Software oder zusätzliche Python-Pakete nötig
+- Empfohlen: Mindestens ein paar Tage Recorder-Daten für aussagekräftige Ergebnisse
+
+> **Hinweis:** Falls der Recorder deaktiviert oder auf eine externe Datenbank (z. B. MariaDB/PostgreSQL) umgestellt ist, funktioniert die Analyse ebenfalls – die Integration nutzt ausschließlich die offizielle HA Recorder API.
+
 ## Installation
 
 ### Via HACS

@@ -89,7 +89,7 @@ class RecorderAnalyzer:
         self._hass = hass
         self._entry = entry
 
-    async def async_analyze(self) -> list[dict]:
+    async def async_analyze(self, ignored_entities: set[str] | None = None) -> list[dict]:
         """Analyze recorder DB and return sorted entity list with recommendations."""
         options = self._entry.options
         top_n = options.get(CONF_TOP_N, DEFAULT_TOP_N)
@@ -110,9 +110,12 @@ class RecorderAnalyzer:
             _LOGGER.error("Recorder query failed: %s", e)
             return []
 
+        ignored = ignored_entities or set()
         results = []
         for entity_id, total_changes in rows:
             if not entity_id:
+                continue
+            if entity_id in ignored:
                 continue
             domain = entity_id.split(".")[0]
             changes_per_day = total_changes / max(lookback_days, 1)

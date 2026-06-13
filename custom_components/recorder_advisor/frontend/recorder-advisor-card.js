@@ -3,7 +3,7 @@
  * @version 1.0.0
  */
 
-const CARD_VERSION = "1.0.0";
+const CARD_VERSION = "1.1.0";
 const DOMAIN = "recorder_advisor";
 
 const REC_LABELS = {
@@ -149,6 +149,52 @@ class RecorderAdvisorCard extends HTMLElement {
     this._render();
   }
 
+  get _selectedIgnored() {
+    if (!this.__selectedIgnored) this.__selectedIgnored = new Set();
+    return this.__selectedIgnored;
+  }
+
+  _toggleSelectIgnored(entityId) {
+    if (this._selectedIgnored.has(entityId)) this._selectedIgnored.delete(entityId);
+    else this._selectedIgnored.add(entityId);
+    this._render();
+  }
+
+  _toggleSelectAllIgnored() {
+    const f = this._filteredIgnored();
+    if (this._selectedIgnored.size >= f.length) this._selectedIgnored.clear();
+    else f.forEach(id => this._selectedIgnored.add(id));
+    this._render();
+  }
+
+  _filteredIgnored() {
+    const f = this._filter.toLowerCase();
+    return this._ignored.filter(id => !f || id.toLowerCase().includes(f)).sort();
+  }
+
+  async _unignoreSelected() {
+    if (this._selectedIgnored.size === 0) {
+      this._message = { type: "warning", text: "Keine Entitäten ausgewählt." };
+      this._render();
+      return;
+    }
+    this._loading = true;
+    this._message = null;
+    this._render();
+    let ok = 0, err = 0;
+    for (const entityId of this._selectedIgnored) {
+      try {
+        await this._hass.callService(DOMAIN, "unignore_entity", { entity_id: entityId });
+        ok++;
+      } catch (e) { err++; }
+    }
+    this._selectedIgnored.clear();
+    this._message = {
+      type: err === 0 ? "success" : "warning",
+      text: `${ok} Entität(en) wieder in Analyse aufgenommen.${err > 0 ? " " + err + " Fehler." : ""}`,
+    };
+  }
+
   _selectByRec(rec) {
     this._filteredEntities()
       .filter(e => e.recommendation === rec)
@@ -192,6 +238,14 @@ class RecorderAdvisorCard extends HTMLElement {
         .btn-success  { background: #4caf50; color: white; }
         .btn-secondary { background: var(--secondary-background-color); color: var(--primary-text-color); border: 1px solid var(--divider-color); }
         .btn-copy { background: #1565c0; color: white; }
+        .btn-ignore  { background: #4fc3f7; color: white; }
+        .btn-unignore { background: #4caf50; color: white; }
+        .ignored-row { display: flex; align-items: center; padding: 10px 16px; border-bottom: 1px solid var(--divider-color); gap: 12px; cursor: pointer; transition: background 0.15s; }
+        .ignored-row:hover { background: var(--secondary-background-color); }
+        .ignored-row.selected { background: rgba(var(--rgb-primary-color,3,169,244), 0.08); }
+        .ignored-row input[type=checkbox] { cursor: pointer; width: 16px; height: 16px; flex-shrink: 0; }
+        .ignored-id { font-size: 0.82em; font-family: monospace; color: var(--primary-text-color); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .ignored-domain { font-size: 0.72em; padding: 2px 7px; border-radius: 10px; background: rgba(158,158,158,0.15); color: #757575; font-weight: 500; }
         .entity-list { max-height: 500px; overflow-y: auto; }
         .entity-row { display: flex; align-items: flex-start; padding: 10px 16px; border-bottom: 1px solid var(--divider-color); gap: 12px; cursor: pointer; transition: background 0.15s; }
         .entity-row:hover { background: var(--secondary-background-color); }
@@ -238,12 +292,15 @@ class RecorderAdvisorCard extends HTMLElement {
 
         <div class="tabs">
           <div class="tab ${this._tab === "list" ? "active" : ""}" id="tab-list">📋 Entitäten</div>
-          <div class="tab ${this._tab === "yaml" ? "active" : ""}" id="tab-yaml">📄 YAML</div>
+          <div class="tab ${this._tab === "yaml"    ? "active" : ""}" id="tab-yaml">📄 YAML</div>
+          <div class="tab ${this._tab === "ignored" ? "active" : ""}" id="tab-ignored">👁 Ignoriert (${this._ignored.length})</div>
         </div>
 
         ${this._message ? `<div class="message ${this._message.type}">${this._message.text}</div>` : ""}
 
-        ${this._tab === "list" ? this._renderList(filtered, selectableFiltered, allSelected) : this._renderYaml()}
+        ${this._tab === "list"    ? this._renderList(filtered, selectableFiltered, allSelected)
+          : this._tab === "yaml"   ? this._renderYaml()
+          : this._renderIgnoredTab()}
       </ha-card>
     `;
 
@@ -273,6 +330,7 @@ class RecorderAdvisorCard extends HTMLElement {
         <span class="info">${this._selected.size} ausgewählt</span>
         <button class="btn-primary" id="btn-gen-yaml" ${this._selected.size === 0 ? "disabled" : ""}>📄 YAML generieren</button>
         <button class="btn-success" id="btn-mark-applied" ${this._selected.size === 0 ? "disabled" : ""}>✅ Als angewendet</button>
+        <button class="btn-ignore" id="btn-ignore" ${this._selected.size === 0 ? "disabled" : ""}>👁 Ignorieren</button>
       </div>
 
       <div class="quick-select">
@@ -319,6 +377,38 @@ class RecorderAdvisorCard extends HTMLElement {
     `;
   }
 
+  _renderIgnoredTab() {
+    const filtered = this._filteredIgnored();
+    const allSel = filtered.length > 0 && this._selectedIgnored.size >= filtered.length;
+    return `
+      <div class="toolbar">
+        <input type="text" id="search-ignored" placeholder="Entität / Domain suchen…" value="${this._filter}">
+      </div>
+      <div class="action-bar">
+        <span class="info">${this._selectedIgnored.size} von ${filtered.length} ausgewählt</span>
+        <button class="btn-unignore" id="btn-unignore" ${this._selectedIgnored.size === 0 ? "disabled" : ""}>↩ Wieder analysieren</button>
+      </div>
+      <div class="select-all-row" id="select-all-ignored">
+        <input type="checkbox" ${allSel ? "checked" : ""}>
+        Alle auswählen (${filtered.length})
+      </div>
+      <div class="entity-list">
+        ${filtered.length === 0
+          ? `<div class="empty">${this._ignored.length === 0 ? "Keine ignorierten Entitäten." : "Keine Ergebnisse."}</div>`
+          : filtered.map(id => {
+              const sel = this._selectedIgnored.has(id);
+              const domain = id.split(".")[0];
+              return `<div class="ignored-row ${sel ? "selected" : ""}" data-ign="${id}">
+                <input type="checkbox" data-ign-cb="${id}" ${sel ? "checked" : ""}>
+                <span class="ignored-id">${id}</span>
+                <span class="ignored-domain">${domain}</span>
+              </div>`;
+            }).join("")
+        }
+      </div>
+    `;
+  }
+
   _renderRow(e) {
     const selected = this._selected.has(e.entity_id);
     const rec = REC_LABELS[e.recommendation] || { label: e.recommendation, color: "#888" };
@@ -353,7 +443,27 @@ class RecorderAdvisorCard extends HTMLElement {
     root.getElementById("btn-copy")?.addEventListener("click", () => this._copyYaml());
     root.getElementById("tab-list")?.addEventListener("click", () => { this._tab = "list"; this._render(); });
     root.getElementById("tab-yaml")?.addEventListener("click", () => { this._tab = "yaml"; this._render(); });
+    root.getElementById("tab-ignored")?.addEventListener("click", () => { this._tab = "ignored"; this._filter = ""; this._selectedIgnored.clear(); this._render(); });
     root.getElementById("tab-back")?.addEventListener("click", () => { this._tab = "list"; this._render(); });
+    root.getElementById("btn-ignore")?.addEventListener("click", async () => {
+      if (this._selected.size === 0) return;
+      this._loading = true; this._render();
+      let ok = 0;
+      for (const eid of this._selected) {
+        try { await this._hass.callService(DOMAIN, "ignore_entity", { entity_id: eid }); ok++; } catch(e) {}
+      }
+      this._selected.clear();
+      this._message = { type: "success", text: `${ok} Entität(en) ignoriert.` };
+    });
+    root.getElementById("btn-unignore")?.addEventListener("click", () => this._unignoreSelected());
+    root.getElementById("select-all-ignored")?.addEventListener("click", () => this._toggleSelectAllIgnored());
+    root.getElementById("search-ignored")?.addEventListener("input", e => { this._filter = e.target.value; this._render(); });
+    root.querySelectorAll("[data-ign-cb]").forEach(cb => {
+      cb.addEventListener("change", e => { e.stopPropagation(); this._toggleSelectIgnored(cb.dataset.ignCb); });
+    });
+    root.querySelectorAll(".ignored-row").forEach(row => {
+      row.addEventListener("click", e => { if (e.target.tagName === "INPUT") return; this._toggleSelectIgnored(row.dataset.ign); });
+    });
     root.getElementById("select-all")?.addEventListener("click", () => this._toggleSelectAll());
     root.getElementById("qs-strongly")?.addEventListener("click", () => this._selectByRec("exclude_strongly"));
     root.getElementById("qs-recommended")?.addEventListener("click", () => this._selectByRec("exclude_recommended"));

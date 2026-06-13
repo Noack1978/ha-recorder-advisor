@@ -29,3 +29,27 @@ mark_applied:
       example: '["sensor.temperatur"]'
       selector:
         object:
+
+ignore_entity:
+  name: Entität ignorieren
+  description: Schließt eine Entität dauerhaft aus der Analyse aus.
+  fields:
+    entity_id:
+      name: Entitäts-ID
+      description: Die zu ignorierende Entität.
+      required: true
+      example: "sensor.temperatur"
+      selector:
+        text:
+
+unignore_entity:
+  name: Ignorierung aufheben
+  description: Nimmt eine Entität wieder in die Analyse auf.
+  fields:
+    entity_id:
+      name: Entitäts-ID
+      description: Die Entität deren Ignorierung aufgehoben werden soll.
+      required: true
+      example: "sensor.temperatur"
+      selector:
+        text:
