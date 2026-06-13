@@ -53,7 +53,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     # Delay initial analysis until HA is fully started
     async def _initial_analysis(_event=None) -> None:
-        runtime.last_results = await analyzer.async_analyze(runtime.ignored_entities)
+        results = await analyzer.async_analyze(runtime.ignored_entities)
+        # Filter out already-applied exclusions
+        runtime.last_results = [
+            e for e in results
+            if e["entity_id"] not in runtime.applied_exclusions
+        ]
         _LOGGER.info("Recorder Advisor initial analysis: %d entities", len(runtime.last_results))
 
     if hass.state is CoreState.running:
@@ -83,7 +88,12 @@ def _register_services(hass: HomeAssistant, entry: ConfigEntry) -> None:
 
     async def handle_reanalyze(call: ServiceCall) -> None:
         runtime: RecorderAdvisorData = entry.runtime_data
-        runtime.last_results = await runtime.analyzer.async_analyze(runtime.ignored_entities)
+        results = await runtime.analyzer.async_analyze(runtime.ignored_entities)
+        # Filter out already-applied exclusions
+        runtime.last_results = [
+            e for e in results
+            if e["entity_id"] not in runtime.applied_exclusions
+        ]
         _fire_results(hass, runtime)
 
     async def handle_generate_yaml(call: ServiceCall) -> None:
@@ -102,10 +112,16 @@ def _register_services(hass: HomeAssistant, entry: ConfigEntry) -> None:
         for eid in entity_ids:
             if eid not in runtime.applied_exclusions:
                 runtime.applied_exclusions.append(eid)
+        # Remove applied entities from results immediately
+        runtime.last_results = [
+            e for e in runtime.last_results
+            if e["entity_id"] not in runtime.applied_exclusions
+        ]
         await runtime.store.async_save({
             "applied_exclusions": runtime.applied_exclusions,
             "ignored_entities": list(runtime.ignored_entities),
         })
+        _fire_results(hass, runtime)
 
     async def handle_ignore_entity(call: ServiceCall) -> None:
         entity_id = call.data.get("entity_id")
