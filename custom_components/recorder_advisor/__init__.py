@@ -23,8 +23,11 @@ class RecorderAdvisorData:
     applied_exclusions: list[str] = field(default_factory=list)
 
 
-async def async_setup(hass: HomeAssistant, config: dict) -> bool:
-    """Set up integration (runs once). Registers frontend resource."""
+
+
+async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+    """Set up Recorder Advisor."""
+    # Register frontend resource (idempotent)
     from homeassistant.core import CoreState, EVENT_HOMEASSISTANT_STARTED
     from .frontend import JSModuleRegistration
 
@@ -36,11 +39,6 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
     else:
         hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STARTED, _register_frontend)
 
-    return True
-
-
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
-    """Set up Recorder Advisor."""
     store = Store(hass, STORAGE_VERSION, STORAGE_KEY)
     stored = await store.async_load() or {}
 
