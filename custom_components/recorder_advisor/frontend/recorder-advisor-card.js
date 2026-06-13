@@ -97,6 +97,7 @@ class RecorderAdvisorCard extends HTMLElement {
     this._applied = [];
     this._selApplied = new Set();
     this._initialized = false;
+    this._activeSearchId = null;
   }
 
   setConfig(config) { this._config = config || {}; }
@@ -323,6 +324,16 @@ class RecorderAdvisorCard extends HTMLElement {
       </ha-card>
     `;
     this._wire();
+    // Restore focus to search field if it was active before render
+    if (this._activeSearchId) {
+      const el = this.shadowRoot.getElementById(this._activeSearchId);
+      if (el) {
+        el.focus();
+        // Restore cursor position at end
+        const len = el.value.length;
+        el.setSelectionRange(len, len);
+      }
+    }
   }
 
   _renderList(filtered, selable, allSel) {
