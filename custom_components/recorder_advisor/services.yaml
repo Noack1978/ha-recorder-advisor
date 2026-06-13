@@ -1,0 +1,31 @@
+get_results:
+  name: Ergebnisse abrufen
+  description: Lädt die letzten Analyse-Ergebnisse und feuert ein Event.
+
+reanalyze:
+  name: Neu analysieren
+  description: Startet eine neue Analyse der Recorder-Datenbank.
+
+generate_yaml:
+  name: YAML generieren
+  description: Generiert einen recorder.yaml Ausschlussblock für ausgewählte Entitäten.
+  fields:
+    entity_ids:
+      name: Entitäts-IDs
+      description: Liste der auszuschließenden Entitäten.
+      required: true
+      example: '["sensor.temperatur", "sensor.luftfeuchte"]'
+      selector:
+        object:
+
+mark_applied:
+  name: Als angewendet markieren
+  description: Markiert Entitäten als bereits in recorder.yaml eingetragen.
+  fields:
+    entity_ids:
+      name: Entitäts-IDs
+      description: Liste der Entitäten die als angewendet markiert werden sollen.
+      required: true
+      example: '["sensor.temperatur"]'
+      selector:
+        object:
