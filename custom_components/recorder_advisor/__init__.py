@@ -150,9 +150,9 @@ def _generate_recorder_yaml(entity_ids: list[str]) -> str:
     """Generate recorder exclude YAML block."""
     if not entity_ids:
         return ""
-    lines = ["recorder:", "  exclude:", "    entities:"]
+    lines = ["exclude:", "  entities:"]
     for eid in sorted(entity_ids):
-        lines.append(f"      - {eid}")
+        lines.append(f"    - {eid}")
     return "\n".join(lines)
 
 

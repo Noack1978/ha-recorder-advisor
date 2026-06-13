@@ -114,10 +114,44 @@ class RecorderAdvisorCard extends HTMLElement {
 
   _copyYaml() {
     if (!this._generatedYaml) return;
-    navigator.clipboard.writeText(this._generatedYaml).then(() => {
-      this._message = { type: "success", text: "YAML in Zwischenablage kopiert!" };
-      this._render();
-    });
+
+    // Primary: modern clipboard API
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(this._generatedYaml).then(() => {
+        this._message = { type: "success", text: "YAML in Zwischenablage kopiert!" };
+        this._render();
+      }).catch(() => this._copyFallback());
+    } else {
+      this._copyFallback();
+    }
+  }
+
+  _copyFallback() {
+    // Fallback: create hidden textarea, select, execCommand
+    try {
+      const ta = document.createElement("textarea");
+      ta.value = this._generatedYaml;
+      ta.style.cssText = "position:fixed;top:-9999px;left:-9999px;opacity:0";
+      document.body.appendChild(ta);
+      ta.focus();
+      ta.select();
+      const ok = document.execCommand("copy");
+      document.body.removeChild(ta);
+      if (ok) {
+        this._message = { type: "success", text: "YAML in Zwischenablage kopiert!" };
+      } else {
+        this._showSelectDialog();
+      }
+    } catch (e) {
+      this._showSelectDialog();
+    }
+    this._render();
+  }
+
+  _showSelectDialog() {
+    // Last resort: show selectable text in a dialog so user can copy manually
+    this._copyDialogOpen = true;
+    this._message = { type: "warning", text: "Automatisches Kopieren nicht möglich – bitte manuell markieren und kopieren." };
   }
 
   _filteredEntities() {
@@ -367,7 +401,8 @@ class RecorderAdvisorCard extends HTMLElement {
       <div class="yaml-panel">
         <h3>📄 recorder.yaml Ausschlüsse</h3>
         <p>Diesen Block in deine <code>recorder.yaml</code> kopieren (bestehende exclude-Liste ergänzen, nicht ersetzen):</p>
-        <pre id="yaml-code">${this._escapeHtml(this._generatedYaml)}</pre>
+        <pre id="yaml-code" title="Text markieren und Strg+C zum Kopieren">${this._escapeHtml(this._generatedYaml)}</pre>
+        ${this._message && this._message.type === "warning" ? '<p style="font-size:0.8em;color:var(--warning-color,#ff9800);margin:4px 0 0">👆 Text oben markieren und mit Strg+C (oder langer Druck) kopieren.</p>' : ""}
         <div class="yaml-actions">
           <button class="btn-copy" id="btn-copy">📋 In Zwischenablage</button>
           <button class="btn-success" id="btn-mark-applied2" ${this._selected.size === 0 ? "disabled" : ""}>✅ Als angewendet markieren</button>
