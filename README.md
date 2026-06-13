@@ -47,6 +47,52 @@ Lovelace-Ressource (falls nicht auto-registriert):
 - URL: `/recorder_advisor_card/recorder-advisor-card.js`
 - Typ: JavaScript-Modul
 
+
+## Recorder-Konfiguration (recorder.yaml)
+
+Der Recorder Advisor generiert fertige YAML-Blöcke zum Ausschließen von Entitäten. So fügst du sie in deine Konfiguration ein:
+
+### Schritt 1 – recorder.yaml einbinden (einmalig)
+
+Falls noch nicht vorhanden, füge folgendes in deine `configuration.yaml` ein:
+
+```yaml
+recorder: !include recorder.yaml
+```
+
+Dann erstelle die Datei `/config/recorder.yaml`.
+
+### Schritt 2 – Ausschlüsse einfügen
+
+Den vom Recorder Advisor generierten Block in die `recorder.yaml` kopieren. Falls bereits ein `exclude`-Block vorhanden ist, nur die Einträge unter `entities:` ergänzen – **nicht ersetzen**:
+
+```yaml
+exclude:
+  entity_globs:
+    - sensor.awtrix_*          # Beispiel bestehender Eintrag
+  entities:
+    - sensor.mein_sensor_1     # ← neu vom Recorder Advisor
+    - sensor.mein_sensor_2     # ← neu vom Recorder Advisor
+```
+
+### Schritt 3 – Konfiguration prüfen & neu starten
+
+1. **Entwicklerwerkzeuge → YAML → Konfiguration prüfen**
+2. **Home Assistant neu starten**
+
+> **Hinweis:** Bereits aufgezeichnete Werte werden nicht automatisch gelöscht. Sie verschwinden nach Ablauf der konfigurierten `purge_keep_days` (Standard: 10 Tage) oder beim nächsten Lauf deines Bereinigungsskripts.
+
+### Internes Event vom Recorder ausschließen (empfohlen)
+
+Die Integration feuert interne Events die nicht aufgezeichnet werden müssen. Ergänze deine `recorder.yaml`:
+
+```yaml
+exclude:
+  event_types:
+    - recorder_advisor_results
+    - recorder_advisor_yaml
+```
+
 ## Empfehlungsstufen
 
 | Stufe | Änderungen/Tag | Bedeutung |
