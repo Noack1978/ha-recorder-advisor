@@ -467,6 +467,73 @@ class RecorderAdvisorCard extends HTMLElement {
     `;
   }
 
+  _updateList() {
+    // Only update the list container — search input keeps focus
+    const listEl = this.shadowRoot.querySelector(".list");
+    const infoEl = this.shadowRoot.querySelector(".info");
+    if (!listEl) { this._render(); return; }
+
+    const filtered  = this._filtered();
+    const filtIgn   = this._filteredIgnored();
+    const filtApp   = this._filteredApplied();
+
+    if (this._tab === "list") {
+      const selable = filtered.filter(e => !e.is_critical);
+      if (infoEl) infoEl.textContent = `${this._selected.size} ausgewaehlt`;
+      listEl.innerHTML = !filtered.length
+        ? `<div class="empty">${this._entities.length ? "Keine Treffer." : "Noch keine Analyse."}</div>`
+        : filtered.map(e => {
+            const sel = this._selected.has(e.entity_id);
+            const rec = REC[e.recommendation] || { label: e.recommendation, color: "#888" };
+            return `<div class="row${sel?" sel":""}${e.is_critical?" crit":""}" data-id="${e.entity_id}">
+              <input type="checkbox" data-cb="${e.entity_id}" ${sel?"checked":""} ${e.is_critical?"disabled":""}>
+              <div class="entity-info">
+                <div class="eid">${e.entity_id}</div>
+                <div class="meta">
+                  <span class="tag tag-domain">${e.domain}</span>
+                  <span class="tag" style="background:${rec.color}22;color:${rec.color}">${rec.label}</span>
+                </div>
+              </div>
+              <div class="changes"><div class="num">${e.changes_per_day}</div><div class="unit">Aend./Tag</div></div>
+            </div>`;
+          }).join("");
+    } else if (this._tab === "ignored") {
+      listEl.innerHTML = !filtIgn.length
+        ? `<div class="empty">${this._ignored.length ? "Keine Treffer." : "Keine ignorierten Entitaeten."}</div>`
+        : filtIgn.map(id => {
+            const sel = this._selIgnored.has(id);
+            return `<div class="ign-row${sel?" sel":""}" data-ign="${id}">
+              <input type="checkbox" data-icb="${id}" ${sel?"checked":""}>
+              <span class="ign-id">${id}</span>
+              <span class="ign-dom">${id.split(".")[0]}</span>
+            </div>`;
+          }).join("");
+    } else if (this._tab === "applied") {
+      listEl.innerHTML = !filtApp.length
+        ? '<div class="empty">Keine angewendeten Ausschluesse.</div>'
+        : filtApp.map(id => {
+            const sel = this._selApplied.has(id);
+            return `<div class="ign-row${sel?" sel":""}" data-app="${id}">
+              <input type="checkbox" data-acb="${id}" ${sel?"checked":""}>
+              <span class="ign-id">${id}</span>
+              <span class="ign-dom">${id.split(".")[0]}</span>
+            </div>`;
+          }).join("");
+    }
+    // Re-wire row click handlers for new list items
+    this._wireListRows();
+  }
+
+  _wireListRows() {
+    const r = this.shadowRoot;
+    r.querySelectorAll("[data-cb]").forEach(cb => cb.addEventListener("change", e => { e.stopPropagation(); this._toggle(cb.dataset.cb); }));
+    r.querySelectorAll(".row:not(.crit)").forEach(row => row.addEventListener("click", e => { if (e.target.tagName==="INPUT") return; this._toggle(row.dataset.id); }));
+    r.querySelectorAll("[data-icb]").forEach(cb => cb.addEventListener("change", e => { e.stopPropagation(); this._toggleIgn(cb.dataset.icb); }));
+    r.querySelectorAll(".ign-row").forEach(row => row.addEventListener("click", e => { if (e.target.tagName==="INPUT") return; this._toggleIgn(row.dataset.ign); }));
+    r.querySelectorAll("[data-acb]").forEach(cb => cb.addEventListener("change", e => { e.stopPropagation(); this._toggleApp(cb.dataset.acb); }));
+    r.querySelectorAll("[data-app]").forEach(row => row.addEventListener("click", e => { if (e.target.tagName==="INPUT") return; this._toggleApp(row.dataset.app); }));
+  }
+
   _wire() {
     const r = this.shadowRoot;
     r.getElementById("btn-ra")      ?.addEventListener("click", () => this._reanalyze());
@@ -480,9 +547,7 @@ class RecorderAdvisorCard extends HTMLElement {
     r.getElementById("qs-strong")   ?.addEventListener("click", () => this._selectRec("exclude_strongly"));
     r.getElementById("qs-rec")      ?.addEventListener("click", () => this._selectRec("exclude_recommended"));
     r.getElementById("sel-all")     ?.addEventListener("click", () => this._selAll());
-    r.getElementById("s-search")?.addEventListener("input",  e => { this._activeSearchId="s-search"; this._filter=e.target.value; this._render(); });
-    r.getElementById("s-search")?.addEventListener("focus", () => { this._activeSearchId="s-search"; });
-    r.getElementById("s-search")?.addEventListener("blur",  () => { this._activeSearchId=null; });
+    r.getElementById("s-search")?.addEventListener("input",  e => { this._filter=e.target.value; this._updateList(); });
     r.getElementById("s-rec")       ?.addEventListener("change", e => { this._filterRec=e.target.value; this._render(); });
     r.getElementById("s-sort")      ?.addEventListener("change", e => { this._sortBy=e.target.value; this._render(); });
     r.querySelectorAll("[data-cb]").forEach(cb => cb.addEventListener("change", e => { e.stopPropagation(); this._toggle(cb.dataset.cb); }));
@@ -492,16 +557,12 @@ class RecorderAdvisorCard extends HTMLElement {
     r.getElementById("btn-back")    ?.addEventListener("click", () => { this._tab="list"; this._render(); });
     r.getElementById("btn-unign")   ?.addEventListener("click", () => this._unignore());
     r.getElementById("sel-all-ign") ?.addEventListener("click", () => this._selAllIgnored());
-    r.getElementById("s-ign")?.addEventListener("input",  e => { this._activeSearchId="s-ign"; this._filter=e.target.value; this._render(); });
-    r.getElementById("s-ign")?.addEventListener("focus", () => { this._activeSearchId="s-ign"; });
-    r.getElementById("s-ign")?.addEventListener("blur",  () => { this._activeSearchId=null; });
+    r.getElementById("s-ign")?.addEventListener("input",  e => { this._filter=e.target.value; this._updateList(); });
     r.querySelectorAll("[data-icb]").forEach(cb => cb.addEventListener("change", e => { e.stopPropagation(); this._toggleIgn(cb.dataset.icb); }));
     r.querySelectorAll(".ign-row").forEach(row => row.addEventListener("click", e => { if (e.target.tagName==="INPUT") return; this._toggleIgn(row.dataset.ign); }));
     r.getElementById("btn-unapp")   ?.addEventListener("click", () => this._unmarkApplied());
     r.getElementById("sel-all-app") ?.addEventListener("click", () => this._selAllApplied());
-    r.getElementById("s-app")?.addEventListener("input",  e => { this._activeSearchId="s-app"; this._filter=e.target.value; this._render(); });
-    r.getElementById("s-app")?.addEventListener("focus", () => { this._activeSearchId="s-app"; });
-    r.getElementById("s-app")?.addEventListener("blur",  () => { this._activeSearchId=null; });
+    r.getElementById("s-app")?.addEventListener("input",  e => { this._filter=e.target.value; this._updateList(); });
     r.querySelectorAll("[data-acb]").forEach(cb => cb.addEventListener("change", e => { e.stopPropagation(); this._toggleApp(cb.dataset.acb); }));
     r.querySelectorAll("[data-app]").forEach(row => row.addEventListener("click", e => { if (e.target.tagName==="INPUT") return; this._toggleApp(row.dataset.app); }));
   }
