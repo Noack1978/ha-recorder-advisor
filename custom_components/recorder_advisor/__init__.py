@@ -24,15 +24,18 @@ class RecorderAdvisorData:
 
 
 async def async_setup(hass: HomeAssistant, config: dict) -> bool:
-    """Register static path for frontend card."""
-    from homeassistant.components.http import StaticPathConfig
-    await hass.http.async_register_static_paths([
-        StaticPathConfig(
-            "/recorder_advisor_card",
-            hass.config.path("custom_components/recorder_advisor/www"),
-            cache_headers=False,
-        )
-    ])
+    """Set up integration (runs once). Registers frontend resource."""
+    from homeassistant.core import CoreState, EVENT_HOMEASSISTANT_STARTED
+    from .frontend import JSModuleRegistration
+
+    async def _register_frontend(_event=None) -> None:
+        await JSModuleRegistration(hass).async_register()
+
+    if hass.state is CoreState.running:
+        await _register_frontend()
+    else:
+        hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STARTED, _register_frontend)
+
     return True
 
 
