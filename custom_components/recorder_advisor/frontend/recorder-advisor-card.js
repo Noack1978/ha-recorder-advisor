@@ -324,15 +324,17 @@ class RecorderAdvisorCard extends HTMLElement {
       </ha-card>
     `;
     this._wire();
-    // Restore focus to search field if it was active before render
+    // Restore focus after browser has finished painting the new DOM
     if (this._activeSearchId) {
-      const el = this.shadowRoot.getElementById(this._activeSearchId);
-      if (el) {
-        el.focus();
-        // Restore cursor position at end
-        const len = el.value.length;
-        el.setSelectionRange(len, len);
-      }
+      const _sid = this._activeSearchId;
+      requestAnimationFrame(() => {
+        const el = this.shadowRoot.getElementById(_sid);
+        if (el) {
+          el.focus();
+          const len = el.value.length;
+          el.setSelectionRange(len, len);
+        }
+      });
     }
   }
 
@@ -478,7 +480,9 @@ class RecorderAdvisorCard extends HTMLElement {
     r.getElementById("qs-strong")   ?.addEventListener("click", () => this._selectRec("exclude_strongly"));
     r.getElementById("qs-rec")      ?.addEventListener("click", () => this._selectRec("exclude_recommended"));
     r.getElementById("sel-all")     ?.addEventListener("click", () => this._selAll());
-    r.getElementById("s-search")    ?.addEventListener("input",  e => { this._filter=e.target.value; this._render(); });
+    r.getElementById("s-search")?.addEventListener("input",  e => { this._activeSearchId="s-search"; this._filter=e.target.value; this._render(); });
+    r.getElementById("s-search")?.addEventListener("focus", () => { this._activeSearchId="s-search"; });
+    r.getElementById("s-search")?.addEventListener("blur",  () => { this._activeSearchId=null; });
     r.getElementById("s-rec")       ?.addEventListener("change", e => { this._filterRec=e.target.value; this._render(); });
     r.getElementById("s-sort")      ?.addEventListener("change", e => { this._sortBy=e.target.value; this._render(); });
     r.querySelectorAll("[data-cb]").forEach(cb => cb.addEventListener("change", e => { e.stopPropagation(); this._toggle(cb.dataset.cb); }));
@@ -488,12 +492,16 @@ class RecorderAdvisorCard extends HTMLElement {
     r.getElementById("btn-back")    ?.addEventListener("click", () => { this._tab="list"; this._render(); });
     r.getElementById("btn-unign")   ?.addEventListener("click", () => this._unignore());
     r.getElementById("sel-all-ign") ?.addEventListener("click", () => this._selAllIgnored());
-    r.getElementById("s-ign")       ?.addEventListener("input",  e => { this._filter=e.target.value; this._render(); });
+    r.getElementById("s-ign")?.addEventListener("input",  e => { this._activeSearchId="s-ign"; this._filter=e.target.value; this._render(); });
+    r.getElementById("s-ign")?.addEventListener("focus", () => { this._activeSearchId="s-ign"; });
+    r.getElementById("s-ign")?.addEventListener("blur",  () => { this._activeSearchId=null; });
     r.querySelectorAll("[data-icb]").forEach(cb => cb.addEventListener("change", e => { e.stopPropagation(); this._toggleIgn(cb.dataset.icb); }));
     r.querySelectorAll(".ign-row").forEach(row => row.addEventListener("click", e => { if (e.target.tagName==="INPUT") return; this._toggleIgn(row.dataset.ign); }));
     r.getElementById("btn-unapp")   ?.addEventListener("click", () => this._unmarkApplied());
     r.getElementById("sel-all-app") ?.addEventListener("click", () => this._selAllApplied());
-    r.getElementById("s-app")       ?.addEventListener("input",  e => { this._filter=e.target.value; this._render(); });
+    r.getElementById("s-app")?.addEventListener("input",  e => { this._activeSearchId="s-app"; this._filter=e.target.value; this._render(); });
+    r.getElementById("s-app")?.addEventListener("focus", () => { this._activeSearchId="s-app"; });
+    r.getElementById("s-app")?.addEventListener("blur",  () => { this._activeSearchId=null; });
     r.querySelectorAll("[data-acb]").forEach(cb => cb.addEventListener("change", e => { e.stopPropagation(); this._toggleApp(cb.dataset.acb); }));
     r.querySelectorAll("[data-app]").forEach(row => row.addEventListener("click", e => { if (e.target.tagName==="INPUT") return; this._toggleApp(row.dataset.app); }));
   }
