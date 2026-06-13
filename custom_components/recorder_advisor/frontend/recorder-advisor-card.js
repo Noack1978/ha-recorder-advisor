@@ -34,26 +34,32 @@ class RecorderAdvisorCard extends HTMLElement {
 
   set hass(hass) {
     this._hass = hass;
+    // Always render immediately — card is never blank
+    this._render();
     if (!this._initialized) {
       this._initialized = true;
-      this._loadResults();
       this._subscribeEvents();
+      this._loadResults();
     }
-    if (!this.shadowRoot.innerHTML) this._render();
   }
 
   _subscribeEvents() {
-    this._hass.connection.subscribeEvents((event) => {
-      this._entities = event.data.entities || [];
-      this._loading = false;
-      this._render();
-    }, `${DOMAIN}_results`);
+    try {
+      this._hass.connection.subscribeEvents((event) => {
+        this._entities = event.data.entities || [];
+        this._ignored  = event.data.ignored  || [];
+        this._loading  = false;
+        this._render();
+      }, `${DOMAIN}_results`);
 
-    this._hass.connection.subscribeEvents((event) => {
-      this._generatedYaml = event.data.yaml || "";
-      this._tab = "yaml";
-      this._render();
-    }, `${DOMAIN}_yaml`);
+      this._hass.connection.subscribeEvents((event) => {
+        this._generatedYaml = event.data.yaml || "";
+        this._tab = "yaml";
+        this._render();
+      }, `${DOMAIN}_yaml`);
+    } catch (e) {
+      console.warn("recorder-advisor-card: subscribeEvents failed", e);
+    }
   }
 
   async _loadResults() {
@@ -65,7 +71,14 @@ class RecorderAdvisorCard extends HTMLElement {
       this._message = { type: "error", text: "Fehler beim Laden: " + e.message };
       this._loading = false;
       this._render();
+      return;
     }
+    // Retry after 3s if event was missed
+    setTimeout(async () => {
+      if (this._entities.length === 0 && !this._loading) {
+        try { await this._hass.callService(DOMAIN, "get_results", {}); } catch (_) {}
+      }
+    }, 3000);
   }
 
   async _reanalyze() {
